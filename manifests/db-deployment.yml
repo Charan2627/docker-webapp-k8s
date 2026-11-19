@@ -1,10 +1,13 @@
+
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: devopsapp
+  namespace: webapps
 spec:
-  replicas: 2
+  serviceName: devopsdb
+  replicas: 1
   selector:
     matchLabels:
       app: db
@@ -18,17 +21,35 @@ spec:
           image: charanmummidi/k8sfirst:dbimage
           ports:
             - containerPort: 3306
-      imagePullSecrets:
-        - name: flm
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: devopsdb
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
 
-
-
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: devopsdb
+  namespace: webapps
 spec:
   clusterIP: None
   selector:
@@ -36,3 +57,4 @@ spec:
   ports:
     - port: 3306
       targetPort: 3306
+      name: mysql
